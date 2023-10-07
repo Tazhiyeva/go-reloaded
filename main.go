@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func main() {
@@ -15,9 +17,9 @@ func main() {
 	fmt.Println("textToModify: " + textToModify)
 	modifiedText := ModifyText(textToModify)
 	//удалить
-	for i := 0; i < len(modifiedText); i++ {
-		fmt.Println("modifiedText: " + modifiedText[i])
-	}
+	// for i := 0; i < len(modifiedText); i++ {
+	// 	fmt.Println("modifiedText: " + modifiedText[i])
+	// }
 	PlaceModifiedTextIntoOutputFile(modifiedText, outputFileName)
 }
 func GetTextFromInputFile(fileName string) string {
@@ -41,6 +43,7 @@ func PlaceModifiedTextIntoOutputFile(modifiedText []string, outputFileName strin
 
 func ModifyText(toModify string) []string {
 	splittedText := strings.Fields(toModify)
+	splittedText = strings.Fields(ApplyLowWithNumber(toModify))
 	splittedText = ApplyBinCommand(splittedText)
 	splittedText = ApplyHexCommand(splittedText)
 	splittedText = ApplyUpCommand(splittedText)
@@ -108,6 +111,72 @@ func ApplyCapCommand(splittedText []string) []string {
 	return splittedText
 }
 
+func ApplyLowWithNumber(str string) string {
+	regexOfLow := regexp.MustCompile(`\(low\s*,\s*\d+\)`)
+	matchingOperations := regexOfLow.FindAllString(str, -1)
+	strSplitted := regexOfLow.Split(str, -1)
+
+	//потом удалить
+	// for i := 0; i < len(strSplitted); i++ {
+	// 	fmt.Print(strSplitted[i])
+	// }
+	// fmt.Println()
+
+	for i := 0; i < len(strSplitted)-1; i++ {
+		countWordsBeforeOperation := ExtractNumberFromOperation(matchingOperations[i])
+		temp := strings.Fields(strSplitted[i])
+		//fmt.Println(matchingOperations[i], countWordsBeforeOperation)
+		//fmt.Println("temp " + temp[i])
+		if countWordsBeforeOperation >= len(temp) {
+			countWordsBeforeOperation = len(temp)
+		}
+		fmt.Println(matchingOperations[i], countWordsBeforeOperation)
+
+		temp = toLower(temp, countWordsBeforeOperation)
+		strSplitted[i] = strings.Join(temp, " ")
+	}
+
+	//потом удалить
+	// for i := 0; i < len(strSplitted); i++ {
+	// 	fmt.Print(strSplitted[i] + " ")
+	// }
+	// fmt.Println()
+	return strings.Join(strSplitted, " ")
+}
+
 func deleteCommandAfterModification(slice []string, index int) []string {
 	return append(slice[:index], slice[index+1:]...)
+}
+
+func toLower(temp []string, countWordsBeforeOperation int) []string {
+	for i := len(temp) - 1; i >= len(temp)-countWordsBeforeOperation; i-- {
+		temp[i] = strings.ToLower(temp[i])
+		fmt.Println(temp[i])
+	}
+	return temp
+}
+
+func ExtractNumberFromOperation(str string) int {
+	var numberStr string
+	foundDigit := false
+
+	for _, char := range str {
+		if unicode.IsDigit(char) {
+			numberStr += string(char)
+			foundDigit = true
+		} else if foundDigit {
+			break
+		}
+	}
+
+	if numberStr == "" {
+		return 0
+	}
+
+	number, err := strconv.Atoi(numberStr)
+	if err != nil {
+		return 0
+	}
+
+	return number
 }
