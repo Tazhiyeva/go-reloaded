@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -11,17 +10,18 @@ import (
 )
 
 func main() {
+	if len(os.Args) != 3 {
+		log.Fatalln("You should try: go run . <inputfile> <outputfile>")
+		return
+	}
+
 	inputFileName := os.Args[1]
 	outputFileName := os.Args[2]
 	textToModify := GetTextFromInputFile(inputFileName)
-	fmt.Println("textToModify: " + textToModify)
 	modifiedText := ModifyText(textToModify)
-	//удалить
-	// for i := 0; i < len(modifiedText); i++ {
-	// 	fmt.Println("modifiedText: " + modifiedText[i])
-	// }
 	PlaceModifiedTextIntoOutputFile(modifiedText, outputFileName)
 }
+
 func GetTextFromInputFile(fileName string) string {
 	text, err := os.ReadFile(fileName)
 	if err != nil {
@@ -29,129 +29,113 @@ func GetTextFromInputFile(fileName string) string {
 	}
 	return string(text)
 }
-func PlaceModifiedTextIntoOutputFile(modifiedText []string, outputFileName string) {
+
+func PlaceModifiedTextIntoOutputFile(modifiedText string, outputFileName string) {
 	createdFile, err := os.Create(outputFileName)
 	if err != nil {
 		log.Fatalf("unable to write text to a file: %v", err)
 	}
-	for i := 0; i < len(modifiedText); i++ {
-		createdFile.WriteString(modifiedText[i] + " ")
-	}
+	createdFile.WriteString(modifiedText)
 	createdFile.WriteString("\n")
 	createdFile.Sync()
 }
 
-func ModifyText(toModify string) []string {
-	splittedText := strings.Fields(toModify)
-	splittedText = strings.Fields(ApplyLowWithNumber(toModify))
-	splittedText = ApplyBinCommand(splittedText)
-	splittedText = ApplyHexCommand(splittedText)
-	splittedText = ApplyUpCommand(splittedText)
-	splittedText = ApplyLowCommand(splittedText)
-	splittedText = ApplyCapCommand(splittedText)
+func ModifyText(toModify string) string {
+	toModify = ApplyConversionOperation(toModify, "(hex)", 16)
+	toModify = ApplyConversionOperation(toModify, "(bin)", 2)
+	toModify = FixPunctuation(toModify)
+	toModify = handleSingleQuotes(toModify)
+	toModify = ReplaceArticles(toModify)
 
-	return splittedText
+	regexOfLow := regexp.MustCompile(`\(low(?:,\s*\d+)?\)`)
+	regexOfUp := regexp.MustCompile(`\(up(?:,\s*\d+)?\)`)
+	regexOfCap := regexp.MustCompile(`\(cap(?:,\s*\d+)?\)`)
+
+	toModify = ApplyStringManipulationOperation(toModify, regexOfLow, ToLower)
+	toModify = ApplyStringManipulationOperation(toModify, regexOfUp, ToUpper)
+	toModify = ApplyStringManipulationOperation(toModify, regexOfCap, ToCapitalize)
+
+	return toModify
 }
 
-func ApplyHexCommand(splittedText []string) []string {
+func ApplyConversionOperation(str, operation string, base int) string {
+	splittedText := strings.Fields(str)
 	for i := 1; i < len(splittedText); i++ {
-		if splittedText[i] == "(hex)" {
-			decimalNumber, err := strconv.ParseInt(splittedText[i-1], 16, 64)
+		if splittedText[i] == operation {
+			decimalNumber, err := strconv.ParseInt(splittedText[i-1], base, 64)
 			if err != nil {
 				log.Fatalf("unable to convert hex to decimal: %v", err)
 			}
 			splittedText[i-1] = strconv.Itoa(int(decimalNumber))
-			splittedText = deleteCommandAfterModification(splittedText, i)
+			splittedText = DeleteCommandAfterModification(splittedText, i)
 		}
 	}
-	return splittedText
+	return strings.Join(splittedText, " ")
 }
 
-func ApplyBinCommand(splittedText []string) []string {
-	for i := 1; i < len(splittedText); i++ {
-		if splittedText[i] == "(bin)" {
-			decimalNumber, err := strconv.ParseInt(splittedText[i-1], 2, 64)
-			if err != nil {
-				log.Fatalf("unable to convert hex to decimal: %v", err)
-			}
-			splittedText[i-1] = strconv.Itoa(int(decimalNumber))
-			splittedText = deleteCommandAfterModification(splittedText, i)
-		}
-	}
-	return splittedText
+func DeleteCommandAfterModification(slice []string, index int) []string {
+	return append(slice[:index], slice[index+1:]...)
 }
 
-func ApplyUpCommand(splittedText []string) []string {
-	for i := 1; i < len(splittedText); i++ {
-		if splittedText[i] == "(up)" {
-			splittedText[i-1] = strings.ToUpper(splittedText[i-1])
-			splittedText = deleteCommandAfterModification(splittedText, i)
-		}
-	}
-	return splittedText
-}
-
-func ApplyLowCommand(splittedText []string) []string {
-	for i := 1; i < len(splittedText); i++ {
-		if splittedText[i] == "(low)" {
-			splittedText[i-1] = strings.ToLower(splittedText[i-1])
-			splittedText = deleteCommandAfterModification(splittedText, i)
-		}
-	}
-	return splittedText
-}
-
-func ApplyCapCommand(splittedText []string) []string {
-	for i := 1; i < len(splittedText); i++ {
-		if splittedText[i] == "(cap)" {
-			splittedText[i-1] = strings.Title(splittedText[i-1])
-			splittedText = deleteCommandAfterModification(splittedText, i)
-		}
-	}
-	return splittedText
-}
-
-func ApplyLowWithNumber(str string) string {
-	regexOfLow := regexp.MustCompile(`\(low\s*,\s*\d+\)`)
-	matchingOperations := regexOfLow.FindAllString(str, -1)
-	strSplitted := regexOfLow.Split(str, -1)
-
-	//потом удалить
-	// for i := 0; i < len(strSplitted); i++ {
-	// 	fmt.Print(strSplitted[i])
-	// }
-	// fmt.Println()
+func ApplyStringManipulationOperation(str string, regex *regexp.Regexp, transformFunc func([]string, int) []string) string {
+	matchingOperations := regex.FindAllString(str, -1)
+	strSplitted := regex.Split(str, -1)
 
 	for i := 0; i < len(strSplitted)-1; i++ {
 		countWordsBeforeOperation := ExtractNumberFromOperation(matchingOperations[i])
 		temp := strings.Fields(strSplitted[i])
-		//fmt.Println(matchingOperations[i], countWordsBeforeOperation)
-		//fmt.Println("temp " + temp[i])
+
 		if countWordsBeforeOperation >= len(temp) {
 			countWordsBeforeOperation = len(temp)
 		}
-		fmt.Println(matchingOperations[i], countWordsBeforeOperation)
 
-		temp = toLower(temp, countWordsBeforeOperation)
+		temp = transformFunc(temp, countWordsBeforeOperation)
 		strSplitted[i] = strings.Join(temp, " ")
 	}
 
-	//потом удалить
-	// for i := 0; i < len(strSplitted); i++ {
-	// 	fmt.Print(strSplitted[i] + " ")
-	// }
-	// fmt.Println()
 	return strings.Join(strSplitted, " ")
 }
 
-func deleteCommandAfterModification(slice []string, index int) []string {
-	return append(slice[:index], slice[index+1:]...)
+func ReplaceArticles(str string) string {
+	splittedText := strings.Fields(str)
+	for i := 0; i < len(splittedText)-1; i++ {
+		if splittedText[i] == "a" && StartedWithVowel(splittedText[i+1]) {
+			splittedText[i] = "an"
+		}
+	}
+	return strings.Join(splittedText, " ")
 }
 
-func toLower(temp []string, countWordsBeforeOperation int) []string {
+func FixPunctuation(toModify string) string {
+	regexOfPunc := regexp.MustCompile(`\s*([!?.,:;]+)`)
+	result := regexOfPunc.ReplaceAllString(toModify, "$1 ")
+	return result
+}
+
+func handleSingleQuotes(text string) string {
+	singleQuotesRegex := regexp.MustCompile(`'\s*(.*?)\s*'`)
+	text = singleQuotesRegex.ReplaceAllString(text, "'$1'")
+
+	return text
+}
+
+func ToCapitalize(temp []string, countWordsBeforeOperation int) []string {
+	for i := len(temp) - 1; i >= len(temp)-countWordsBeforeOperation; i-- {
+		temp[i] = strings.Title(temp[i])
+	}
+	return temp
+}
+
+func ToLower(temp []string, countWordsBeforeOperation int) []string {
 	for i := len(temp) - 1; i >= len(temp)-countWordsBeforeOperation; i-- {
 		temp[i] = strings.ToLower(temp[i])
-		fmt.Println(temp[i])
+	}
+	return temp
+}
+
+func ToUpper(temp []string, countWordsBeforeOperation int) []string {
+	for i := len(temp) - 1; i >= len(temp)-countWordsBeforeOperation; i-- {
+		temp[i] = strings.ToUpper(temp[i])
 	}
 	return temp
 }
@@ -170,7 +154,7 @@ func ExtractNumberFromOperation(str string) int {
 	}
 
 	if numberStr == "" {
-		return 0
+		return 1
 	}
 
 	number, err := strconv.Atoi(numberStr)
@@ -179,4 +163,15 @@ func ExtractNumberFromOperation(str string) int {
 	}
 
 	return number
+}
+
+func StartedWithVowel(str string) bool {
+	vowels := "aeiouhAEIOUH"
+	for _, letter := range vowels {
+		if rune(str[0]) == letter {
+			return true
+		}
+	}
+
+	return false
 }
