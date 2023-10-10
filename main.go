@@ -44,7 +44,7 @@ func ModifyText(toModify string) string {
 	toModify = ApplyConversionOperation(toModify, "(hex)", 16)
 	toModify = ApplyConversionOperation(toModify, "(bin)", 2)
 	toModify = FixPunctuation(toModify)
-	toModify = handleSingleQuotes(toModify)
+	toModify = HandleSingleQuotes(toModify)
 	toModify = ReplaceArticles(toModify)
 
 	regexOfLow := regexp.MustCompile(`\(low(?:,\s*\d+)?\)`)
@@ -102,6 +102,9 @@ func ReplaceArticles(str string) string {
 		if splittedText[i] == "a" && StartedWithVowel(splittedText[i+1]) {
 			splittedText[i] = "an"
 		}
+		if splittedText[i] == "A" && StartedWithVowel(splittedText[i+1]) {
+			splittedText[i] = "An"
+		}
 	}
 	return strings.Join(splittedText, " ")
 }
@@ -112,7 +115,7 @@ func FixPunctuation(toModify string) string {
 	return result
 }
 
-func handleSingleQuotes(text string) string {
+func HandleSingleQuotes(text string) string {
 	singleQuotesRegex := regexp.MustCompile(`'\s*(.*?)\s*'`)
 	text = singleQuotesRegex.ReplaceAllString(text, "'$1'")
 
@@ -168,7 +171,7 @@ func ExtractNumberFromOperation(str string) int {
 func StartedWithVowel(str string) bool {
 	vowels := "aeiouhAEIOUH"
 	for _, letter := range vowels {
-		if rune(str[0]) == letter {
+		if letter == rune(str[0]) {
 			return true
 		}
 	}
