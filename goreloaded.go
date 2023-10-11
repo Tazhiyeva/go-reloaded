@@ -42,9 +42,9 @@ func PlaceModifiedTextIntoOutputFile(formattedText string, outputFileName string
 }
 
 func GetFormattedText(originalText string) string {
-	formattedText := FixPunctuation(originalText)
-	formattedText = HandleSingleQuotes(originalText)
-	formattedText = ReplaceArticles(originalText)
+	formattedText := ReplaceArticles(originalText)
+	formattedText = HandleSingleQuotes(formattedText)
+	formattedText = FixPunctuation(formattedText)
 
 	regexOfHex := regexp.MustCompile(`\(hex\)`)
 	regexOfBin := regexp.MustCompile(`\(bin\)`)
@@ -52,16 +52,16 @@ func GetFormattedText(originalText string) string {
 	regexOfUp := regexp.MustCompile(`\(up(?:,\s*\d+)?\)`)
 	regexOfCap := regexp.MustCompile(`\(cap(?:,\s*\d+)?\)`)
 
-	formattedText = ApplyFormattingComand(formattedText, regexOfHex, ConvertHexToDecimal)
-	formattedText = ApplyFormattingComand(formattedText, regexOfBin, ConvertBinToDecimal)
-	formattedText = ApplyFormattingComand(formattedText, regexOfLow, ToLower)
-	formattedText = ApplyFormattingComand(formattedText, regexOfUp, ToUpper)
-	formattedText = ApplyFormattingComand(formattedText, regexOfCap, ToCapitalize)
+	formattedText = ApplyFormattingCommand(formattedText, regexOfHex, ConvertHexToDecimal)
+	formattedText = ApplyFormattingCommand(formattedText, regexOfBin, ConvertBinToDecimal)
+	formattedText = ApplyFormattingCommand(formattedText, regexOfLow, ToLower)
+	formattedText = ApplyFormattingCommand(formattedText, regexOfUp, ToUpper)
+	formattedText = ApplyFormattingCommand(formattedText, regexOfCap, ToCapitalize)
 
 	return formattedText
 }
 
-func ApplyFormattingComand(originalText string, regex *regexp.Regexp, transformFunc func(string) string) string {
+func ApplyFormattingCommand(originalText string, regex *regexp.Regexp, transformFunc func(string) string) string {
 	matchingCommands := regex.FindAllString(originalText, -1)
 	segmentedOriginalText := regex.Split(originalText, -1)
 
@@ -73,10 +73,14 @@ func ApplyFormattingComand(originalText string, regex *regexp.Regexp, transformF
 			countWordsBeforeFormattingCommand = len(wordsOfSegmentedText)
 		}
 
-		for i := len(wordsOfSegmentedText) - 1; i >= len(wordsOfSegmentedText)-countWordsBeforeFormattingCommand; i-- {
-			wordsOfSegmentedText[i] = transformFunc(wordsOfSegmentedText[i])
+		for j := len(wordsOfSegmentedText) - 1; j >= len(wordsOfSegmentedText)-countWordsBeforeFormattingCommand; j-- {
+			wordsOfSegmentedText[j] = transformFunc(wordsOfSegmentedText[j])
 		}
 		segmentedOriginalText[i] = strings.Join(wordsOfSegmentedText, " ")
+		// to have space between segments except after and before the last word
+		if i != len(segmentedOriginalText)-2 {
+			segmentedOriginalText[i] = segmentedOriginalText[i] + " "
+		}
 	}
 	return strings.Join(segmentedOriginalText, "")
 }
@@ -103,13 +107,14 @@ func ReplaceArticles(originalText string) string {
 func FixPunctuation(originalText string) string {
 	regexOfPunc := regexp.MustCompile(`\s*([!?.,:;]+)`)
 	formattedText := regexOfPunc.ReplaceAllString(originalText, "$1 ")
+
 	return formattedText
 }
 
 func HandleSingleQuotes(originalText string) string {
-	originalText = ReplaceApostrophe(originalText)
+	formattedText := ReplaceApostrophe(originalText)
 	singleQuotesRegex := regexp.MustCompile(`'\s*(.*?)\s*'`)
-	formattedText := singleQuotesRegex.ReplaceAllString(originalText, "'$1'")
+	formattedText = singleQuotesRegex.ReplaceAllString(originalText, "'$1'")
 	return formattedText
 }
 
@@ -132,7 +137,7 @@ func ConvertHexToDecimal(hexNumber string) string {
 		fmt.Println("Unable to convert hex to decimal.")
 		return hexNumber
 	}
-	hexNumber = " " + strconv.Itoa(int(decimalNumber)) + " "
+	hexNumber = strconv.Itoa(int(decimalNumber))
 
 	return hexNumber
 }
@@ -144,7 +149,7 @@ func ConvertBinToDecimal(binNumber string) string {
 		fmt.Println("Unable to convert bin to decimal.")
 		return binNumber
 	}
-	binNumber = " " + strconv.Itoa(int(decimalNumber)) + " "
+	binNumber = strconv.Itoa(int(decimalNumber))
 
 	return binNumber
 }
