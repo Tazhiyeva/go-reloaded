@@ -19,7 +19,7 @@ func main() {
 	inputFileName := os.Args[1]
 	outputFileName := os.Args[2]
 	originalText := GetTextFromInputFile(inputFileName)
-	formattedText := TextFormatting(originalText)
+	formattedText := GetFormattedText(originalText)
 	PlaceModifiedTextIntoOutputFile(formattedText, outputFileName)
 }
 
@@ -41,10 +41,10 @@ func PlaceModifiedTextIntoOutputFile(formattedText string, outputFileName string
 	createdFile.Sync()
 }
 
-func TextFormatting(originalText string) string {
-	originalText = FixPunctuation(originalText)
-	originalText = HandleSingleQuotes(originalText)
-	originalText = ReplaceArticles(originalText)
+func GetFormattedText(originalText string) string {
+	formattedText := FixPunctuation(originalText)
+	formattedText = HandleSingleQuotes(originalText)
+	formattedText = ReplaceArticles(originalText)
 
 	regexOfHex := regexp.MustCompile(`\(hex\)`)
 	regexOfBin := regexp.MustCompile(`\(bin\)`)
@@ -52,13 +52,13 @@ func TextFormatting(originalText string) string {
 	regexOfUp := regexp.MustCompile(`\(up(?:,\s*\d+)?\)`)
 	regexOfCap := regexp.MustCompile(`\(cap(?:,\s*\d+)?\)`)
 
-	originalText = ApplyFormattingComand(originalText, regexOfHex, ConvertHexToDecimal)
-	originalText = ApplyFormattingComand(originalText, regexOfBin, ConvertBinToDecimal)
-	originalText = ApplyFormattingComand(originalText, regexOfLow, ToLower)
-	originalText = ApplyFormattingComand(originalText, regexOfUp, ToUpper)
-	originalText = ApplyFormattingComand(originalText, regexOfCap, ToCapitalize)
+	formattedText = ApplyFormattingComand(formattedText, regexOfHex, ConvertHexToDecimal)
+	formattedText = ApplyFormattingComand(formattedText, regexOfBin, ConvertBinToDecimal)
+	formattedText = ApplyFormattingComand(formattedText, regexOfLow, ToLower)
+	formattedText = ApplyFormattingComand(formattedText, regexOfUp, ToUpper)
+	formattedText = ApplyFormattingComand(formattedText, regexOfCap, ToCapitalize)
 
-	return originalText
+	return formattedText
 }
 
 func ApplyFormattingComand(originalText string, regex *regexp.Regexp, transformFunc func(string) string) string {
@@ -84,16 +84,16 @@ func ApplyFormattingComand(originalText string, regex *regexp.Regexp, transformF
 func ReplaceArticles(originalText string) string {
 	wordsOfOriginalText := strings.Fields(originalText)
 	for i := 0; i < len(wordsOfOriginalText)-1; i++ {
-		if wordsOfOriginalText[i] == "a" && StartedWithVowel(wordsOfOriginalText[i+1]) {
+		if wordsOfOriginalText[i] == "a" && IsStartedWithVowel(wordsOfOriginalText[i+1]) {
 			wordsOfOriginalText[i] = "an"
 		}
-		if wordsOfOriginalText[i] == "A" && StartedWithVowel(wordsOfOriginalText[i+1]) {
+		if wordsOfOriginalText[i] == "A" && IsStartedWithVowel(wordsOfOriginalText[i+1]) {
 			wordsOfOriginalText[i] = "An"
 		}
-		if wordsOfOriginalText[i] == "an" && !StartedWithVowel(wordsOfOriginalText[i+1]) {
+		if wordsOfOriginalText[i] == "an" && !IsStartedWithVowel(wordsOfOriginalText[i+1]) {
 			wordsOfOriginalText[i] = "a"
 		}
-		if wordsOfOriginalText[i] == "An" && !StartedWithVowel(wordsOfOriginalText[i+1]) {
+		if wordsOfOriginalText[i] == "An" && !IsStartedWithVowel(wordsOfOriginalText[i+1]) {
 			wordsOfOriginalText[i] = "A"
 		}
 	}
@@ -114,8 +114,14 @@ func HandleSingleQuotes(originalText string) string {
 }
 
 func ReplaceApostrophe(originalText string) string {
-	regex := regexp.MustCompile(`\b+'s\b`)
-	formattedText := regex.ReplaceAllLiteralString(originalText, "‘s")
+	regexS := regexp.MustCompile(`\b+'s\b`)
+	formattedText := regexS.ReplaceAllLiteralString(originalText, "‘s")
+	regexT := regexp.MustCompile(`\b+'t\b`)
+	formattedText = regexT.ReplaceAllLiteralString(formattedText, "‘t")
+	regexLL := regexp.MustCompile(`\b+'ll\b`)
+	formattedText = regexLL.ReplaceAllLiteralString(formattedText, "‘ll")
+	regexRe := regexp.MustCompile(`\b+'re\b`)
+	formattedText = regexRe.ReplaceAllLiteralString(formattedText, "‘re")
 	return formattedText
 }
 
@@ -124,6 +130,7 @@ func ConvertHexToDecimal(hexNumber string) string {
 	// case when word before command is not hex number.
 	if err != nil {
 		fmt.Println("Unable to convert hex to decimal.")
+		return hexNumber
 	}
 	hexNumber = " " + strconv.Itoa(int(decimalNumber)) + " "
 
@@ -134,7 +141,8 @@ func ConvertBinToDecimal(binNumber string) string {
 	decimalNumber, err := strconv.ParseInt(binNumber, 2, 64)
 	// case when word before command is not hex number.
 	if err != nil {
-		fmt.Println("Unable to convert hex to decimal.")
+		fmt.Println("Unable to convert bin to decimal.")
+		return binNumber
 	}
 	binNumber = " " + strconv.Itoa(int(decimalNumber)) + " "
 
@@ -152,11 +160,11 @@ func ToUpper(wordToFormat string) string {
 	return strings.ToUpper(wordToFormat)
 }
 
-func ExtractNumberFromCommand(str string) int {
+func ExtractNumberFromCommand(command string) int {
 	var numberStr string
 	foundDigit := false
 
-	for _, char := range str {
+	for _, char := range command {
 		if unicode.IsDigit(char) {
 			numberStr += string(char)
 			foundDigit = true
@@ -177,7 +185,7 @@ func ExtractNumberFromCommand(str string) int {
 	return number
 }
 
-func StartedWithVowel(nextWordAfterArticle string) bool {
+func IsStartedWithVowel(nextWordAfterArticle string) bool {
 	vowels := "aeiouhAEIOUH"
 	for _, letter := range vowels {
 		if letter == rune(nextWordAfterArticle[0]) {
