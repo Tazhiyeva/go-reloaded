@@ -93,7 +93,7 @@ func ApplyStringManipulationOperation(str string, regex *regexp.Regexp, transfor
 		strSplitted[i] = strings.Join(temp, " ")
 	}
 
-	return strings.Join(strSplitted, " ")
+	return strings.Join(strSplitted, "")
 }
 
 func ReplaceArticles(str string) string {
@@ -104,6 +104,12 @@ func ReplaceArticles(str string) string {
 		}
 		if splittedText[i] == "A" && StartedWithVowel(splittedText[i+1]) {
 			splittedText[i] = "An"
+		}
+		if splittedText[i] == "an" && !StartedWithVowel(splittedText[i+1]) {
+			splittedText[i] = "a"
+		}
+		if splittedText[i] == "An" && !StartedWithVowel(splittedText[i+1]) {
+			splittedText[i] = "A"
 		}
 	}
 	return strings.Join(splittedText, " ")
@@ -116,9 +122,15 @@ func FixPunctuation(toModify string) string {
 }
 
 func HandleSingleQuotes(text string) string {
+	text = ReplaceApostrophe(text)
 	singleQuotesRegex := regexp.MustCompile(`'\s*(.*?)\s*'`)
 	text = singleQuotesRegex.ReplaceAllString(text, "'$1'")
+	return text
+}
 
+func ReplaceApostrophe(text string) string {
+	regex := regexp.MustCompile(`\b+'s\b`)
+	text = regex.ReplaceAllLiteralString(text, "‘s")
 	return text
 }
 
