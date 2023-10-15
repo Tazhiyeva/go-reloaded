@@ -1,7 +1,9 @@
 package main
+
 import (
 	"testing"
 )
+
 type startedWithVowelTest struct {
 	nextWordAfterArticle string
 	expected             bool
@@ -38,6 +40,7 @@ type getFormattedText struct {
 	originalText string
 	expected     string
 }
+
 var startedWithVowelTests = []startedWithVowelTest{
 	{nextWordAfterArticle: "eight", expected: true},
 	{nextWordAfterArticle: "hour", expected: true},
@@ -77,13 +80,16 @@ var handleSingleQuotesTests = []handleSingleQuotes{
 	{originalText: "'  hi' she said", expected: "'hi' she said"},
 	{originalText: "it‘s ' smart '", expected: "it‘s 'smart'"},
 	{originalText: "hello ' hello hello ' hello", expected: "hello 'hello hello' hello"},
+	{originalText: "afagf '     asdf   don't   adfd f     '", expected: "afagf 'asdf   don‘t   adfd f'"},
 }
 var fixPunctuationTests = []fixPunctuation{
 	{originalText: "actually , hi", expected: "actually, hi"},
+	{originalText: "actual ,hi", expected: "actual, hi"},
 	{originalText: "'hi !? hi'", expected: "'hi!? hi'"},
 	{originalText: " , hi she said", expected: ", hi she said"},
 	{originalText: "it‘s. smart : ", expected: "it‘s. smart: "},
-	{originalText: "hello ? hello hello ! hello.", expected: "hello? hello hello! hello. "},
+	{originalText: "hello ? hello hello ! hello.", expected: "hello? hello hello! hello."},
+	{originalText: "hello ? , ,     ,    , hello hello ! hello.", expected: "hello?,,,, hello hello! hello."},
 }
 var replaceArticlesTests = []replaceArticles{
 	{originalText: "an apple", expected: "an apple"},
@@ -114,7 +120,7 @@ var getFormattedTextTests = []getFormattedText{
 	},
 	{
 		originalText: "(hex) .",
-		expected:     ". ",
+		expected:     ".",
 	},
 	{
 		originalText: "The (bin) 10 (bin) 1010 (bin) 11110 (bin) GHIJKLMN",
@@ -134,7 +140,7 @@ var getFormattedTextTests = []getFormattedText{
 	},
 	{
 		originalText: "(bin) .",
-		expected:     ". ",
+		expected:     ".",
 	},
 	{
 		originalText: "HELLO. (low) I am good",
@@ -166,11 +172,15 @@ var getFormattedTextTests = []getFormattedText{
 	},
 	{
 		originalText: "HELLO (low, 2.) I am good",
-		expected:     "HELLO (low, 2. ) I am good",
+		expected:     "HELLO (low, 2.) I am good",
 	},
 	{
 		originalText: "123 (low) HELLO",
 		expected:     "123 HELLO",
+	},
+	{
+		originalText: "123 heheh heheh heheh (low, 99999999999) HELLO",
+		expected:     "123 heheh heheh heheh HELLO",
 	},
 	{
 		originalText: "hello. (up) I am good",
@@ -198,7 +208,7 @@ var getFormattedTextTests = []getFormattedText{
 	},
 	{
 		originalText: "HELLO (up, 2.) I am good",
-		expected:     "HELLO (up, 2. ) I am good",
+		expected:     "HELLO (up, 2.) I am good",
 	},
 	{
 		originalText: "123 (up) HELLO",
@@ -210,41 +220,42 @@ var getFormattedTextTests = []getFormattedText{
 	},
 	{
 		originalText: "HELLO MY BABY, I Missed SO mUch (cap, 5).",
-		expected:     "HELLO MY BABY, I Missed SO MUch. ",
+		expected:     "HELLO MY BABY, I Missed SO MUch.",
 	},
 	{
 		originalText: "I LIKE to (cap) read (cap) BOOKS.",
-		expected:     "I LIKE To Read BOOKS. ",
+		expected:     "I LIKE To Read BOOKS.",
 	},
 	{
 		originalText: "Hello , i like to (cap) read. (cap,2) BOOKS.",
-		expected:     "Hello, i like To Read. BOOKS. ",
+		expected:     "Hello, i like To Read. BOOKS.",
 	},
 	{
 		originalText: "hello (cap, 10).",
-		expected:     "Hello. ",
+		expected:     "Hello.",
 	},
 	{
 		originalText: "HELLO (cap, ABC).",
-		expected:     "HELLO (cap, ABC). ",
+		expected:     "HELLO (cap, ABC).",
 	},
 	{
 		originalText: "HELLO (cap, 2.) I am good.",
-		expected:     "HELLO (cap, 2. ) I am good. ",
+		expected:     "HELLO (cap, 2.) I am good.",
 	},
 	{
 		originalText: "123 (cap) HELLO.",
-		expected:     "123 HELLO. ",
+		expected:     "123 HELLO.",
 	},
 	{
 		originalText: "one (up) , two , three (cap,2), ' four' , an FIVE, (low) ' six ,seven ?! a eight' 00111 (bin) FFF (hex) The end ... ",
-		expected:     "ONE, Two, Three, 'four', a five, 'six, seven?! an eight' 7 4095 The end... ",
+		expected:     "ONE, Two, Three, 'four', a five, 'six, seven?! an eight' 7 4095 The end...",
 	},
 	{
 		originalText: "I was sitting over there ,and then BAMM !!",
-		expected:     "I was sitting over there, and then BAMM!! ",
+		expected:     "I was sitting over there, and then BAMM!!",
 	},
 }
+
 func TestIsStartedWithVowel(t *testing.T) {
 	for _, test := range startedWithVowelTests {
 		if output := IsStartedWithVowel(test.nextWordAfterArticle); output != test.expected {

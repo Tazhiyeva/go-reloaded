@@ -1,1 +1,0 @@
-one (up) , two , three (cap,2), ' four' , an FIVE, (low) ' six ,seven ?! a eight' 00111 (bin) FFF (hex) The end ... ",

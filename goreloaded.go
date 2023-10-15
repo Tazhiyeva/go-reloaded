@@ -1,4 +1,5 @@
 package main
+
 import (
 	"bufio"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"unicode"
 )
+
 func main() {
 	if len(os.Args) != 3 {
 		fmt.Println("You should try: go run . <inputfile> <outputfile>")
@@ -23,6 +25,7 @@ func main() {
 	for i := 0; i < len(formattedText); i++ {
 		PlaceModifiedTextIntoOutputFile(formattedText[i], outputFileName)
 	}
+	fmt.Println("The program has been executed.")
 }
 func GetTextFromInputFile(fileName string) []string {
 	readFile, err := os.Open(fileName)
@@ -103,17 +106,50 @@ func ReplaceArticles(originalText string) string {
 	}
 	return strings.Join(wordsOfOriginalText, " ")
 }
+
 func FixPunctuation(originalText string) string {
-	regexPunc := regexp.MustCompile(`\s*([,.?!;:]+)\s*`)
-	formattedText := regexPunc.ReplaceAllString(originalText, "$1 ")
-	return formattedText
+	originalTextRunes := []rune(originalText)
+
+	for i := len(originalTextRunes) - 1; i > 0; i-- {
+		if isPunctuation(originalTextRunes[i]) && originalTextRunes[i-1] == ' ' {
+			originalTextRunes = deleteSpace(originalTextRunes, i-1)
+		}
+	}
+	for i := 0; i < len(originalTextRunes)-1; i++ {
+		if isPunctuation(originalTextRunes[i]) && (!unicode.IsPunct(originalTextRunes[i+1]) && originalTextRunes[i+1] != ' ') {
+			originalTextRunes = addSpace(originalTextRunes, i+1)
+		}
+	}
+
+	return string(originalTextRunes)
 }
+
+func deleteSpace(slice []rune, index int) []rune {
+	return append(slice[:index], slice[index+1:]...)
+}
+
+func addSpace(slice []rune, index int) []rune {
+	newArray := append(slice[:index], append([]rune{' '}, slice[index:]...)...)
+	return newArray
+}
+
+func isPunctuation(r rune) bool {
+	punctuations := ".,:;?!"
+	for _, punctuation := range punctuations {
+		if punctuation == r {
+			return true
+		}
+	}
+	return false
+}
+
 func HandleSingleQuotes(originalText string) string {
 	formattedText := ReplaceApostrophe(originalText)
 	singleQuotesRegex := regexp.MustCompile(`'\s*(.*?)\s*'`)
-	formattedText = singleQuotesRegex.ReplaceAllString(originalText, "'$1'")
+	formattedText = singleQuotesRegex.ReplaceAllString(formattedText, "'$1'")
 	return formattedText
 }
+
 func ReplaceApostrophe(originalText string) string {
 	regexS := regexp.MustCompile(`\b+'s\b`)
 	formattedText := regexS.ReplaceAllLiteralString(originalText, "‘s")
@@ -168,6 +204,12 @@ func ExtractNumberFromCommand(command string) int {
 	if numberStr == "" {
 		return 1
 	}
+
+	if len(numberStr) > 10 {
+		fmt.Printf("Warning: unable to handle too big numbers <3 (%v)\n", numberStr)
+		return 0
+	}
+
 	number, err := strconv.Atoi(numberStr)
 	if err != nil {
 		return 0
