@@ -155,7 +155,7 @@ var getFormattedTextTests = []getFormattedText{
 		expected:     "I LIKE to read BOOKS",
 	},
 	{
-		originalText: "Hello , I LIKE TO (low) READ. (low,2) BOOKS",
+		originalText: "Hello , I LIKE TO (  low) READ. (low,2) BOOKS",
 		expected:     "Hello, I LIKE to read. BOOKS",
 	},
 	{
@@ -219,7 +219,7 @@ var getFormattedTextTests = []getFormattedText{
 		expected:     "Hello. I am good",
 	},
 	{
-		originalText: "HELLO MY BABY, I Missed SO mUch (cap, 5).",
+		originalText: "HELLO MY BABY, I Missed SO mUch (   cap, 5).",
 		expected:     "HELLO MY BABY, I Missed SO MUch.",
 	},
 	{
@@ -253,6 +253,18 @@ var getFormattedTextTests = []getFormattedText{
 	{
 		originalText: "I was sitting over there ,and then BAMM !!",
 		expected:     "I was sitting over there, and then BAMM!!",
+	},
+	{
+		originalText: "hello a hour (cap) (low, 3)",
+		expected:     "hello an hour",
+	},
+	{
+		originalText: "madina (cap) (low) tazhiyeva (up, 3)",
+		expected:     "MADINA TAZHIYEVA",
+	},
+	{
+		originalText: "shmitia (cap) is my cat (lower case)",
+		expected:     "Shmitia is my cat (lower case)",
 	},
 }
 

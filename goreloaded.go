@@ -27,6 +27,7 @@ func main() {
 	}
 	fmt.Println("The program has been executed.")
 }
+
 func GetTextFromInputFile(fileName string) []string {
 	readFile, err := os.Open(fileName)
 	if err != nil {
@@ -41,6 +42,7 @@ func GetTextFromInputFile(fileName string) []string {
 	readFile.Close()
 	return originalText
 }
+
 func PlaceModifiedTextIntoOutputFile(formattedText string, outputFileName string) {
 	file, err := os.OpenFile(outputFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -52,42 +54,56 @@ func PlaceModifiedTextIntoOutputFile(formattedText string, outputFileName string
 		fmt.Println("Could not write text to example.txt")
 	}
 }
+
 func GetFormattedText(originalText string) string {
+	regex := regexp.MustCompile(`\(\s*(low|up|cap|hex|bin)(?:,\s*\d+)?\s*\)`)
 	formattedText := ReplaceArticles(originalText)
 	formattedText = HandleSingleQuotes(formattedText)
 	formattedText = FixPunctuation(formattedText)
-	regexOfHex := regexp.MustCompile(`\(hex\)`)
-	regexOfBin := regexp.MustCompile(`\(bin\)`)
-	regexOfLow := regexp.MustCompile(`\(low(?:,\s*\d+)?\)`)
-	regexOfUp := regexp.MustCompile(`\(up(?:,\s*\d+)?\)`)
-	regexOfCap := regexp.MustCompile(`\(cap(?:,\s*\d+)?\)`)
-	formattedText = ApplyFormattingCommand(formattedText, regexOfHex, ConvertHexToDecimal)
-	formattedText = ApplyFormattingCommand(formattedText, regexOfBin, ConvertBinToDecimal)
-	formattedText = ApplyFormattingCommand(formattedText, regexOfLow, ToLower)
-	formattedText = ApplyFormattingCommand(formattedText, regexOfUp, ToUpper)
-	formattedText = ApplyFormattingCommand(formattedText, regexOfCap, ToCapitalize)
+	formattedText = ApplyFormattingCommand(formattedText, regex)
 	return formattedText
 }
-func ApplyFormattingCommand(originalText string, regex *regexp.Regexp, transformFunc func(string) string) string {
-	matchingCommands := regex.FindAllString(originalText, -1)
-	segmentedOriginalText := regex.Split(originalText, -1)
-	for i := 0; i < len(segmentedOriginalText)-1; i++ {
-		countWordsBeforeFormattingCommand := ExtractNumberFromCommand(matchingCommands[i])
-		wordsOfSegmentedText := strings.Fields(segmentedOriginalText[i])
+
+func ApplyFormattingCommand(originalText string, regex *regexp.Regexp) string {
+	matches := regex.FindAllString(originalText, -1)
+
+	for _, command := range matches {
+		countWordsBeforeFormattingCommand := ExtractNumberFromCommand(command)
+		segment := regex.Split(originalText, 2)
+		wordsOfSegmentedText := strings.Fields(segment[0])
+
 		if countWordsBeforeFormattingCommand >= len(wordsOfSegmentedText) {
 			countWordsBeforeFormattingCommand = len(wordsOfSegmentedText)
 		}
+
 		for j := len(wordsOfSegmentedText) - 1; j >= len(wordsOfSegmentedText)-countWordsBeforeFormattingCommand; j-- {
-			wordsOfSegmentedText[j] = transformFunc(wordsOfSegmentedText[j])
+			wordsOfSegmentedText[j] = applyCommand(command, wordsOfSegmentedText[j])
 		}
-		segmentedOriginalText[i] = strings.Join(wordsOfSegmentedText, " ")
-		// to have space between segments except after and before the last word
-		if i != len(segmentedOriginalText)-2 {
-			segmentedOriginalText[i] = segmentedOriginalText[i] + " "
-		}
+
+		segment[0] = strings.Join(wordsOfSegmentedText, " ")
+		originalText = strings.Join(segment, "")
 	}
-	return strings.Join(segmentedOriginalText, "")
+
+	return originalText
 }
+
+func applyCommand(command, wordToFormat string) string {
+	switch {
+	case regexp.MustCompile(`\(\s*low(?:,\s*\d+)?\s*\)`).MatchString(command):
+		return ToLower(wordToFormat)
+	case regexp.MustCompile(`\(\s*up(?:,\s*\d+)?\s*\)`).MatchString(command):
+		return ToUpper(wordToFormat)
+	case regexp.MustCompile(`\(\s*cap(?:,\s*\d+)?\s*\)`).MatchString(command):
+		return ToCapitalize(wordToFormat)
+	case regexp.MustCompile(`\(\s*hex\s*\)`).MatchString(command):
+		return ConvertHexToDecimal(wordToFormat)
+	case regexp.MustCompile(`\(\s*bin\s*\)`).MatchString(command):
+		return ConvertBinToDecimal(wordToFormat)
+	default:
+		return wordToFormat
+	}
+}
+
 func ReplaceArticles(originalText string) string {
 	wordsOfOriginalText := strings.Fields(originalText)
 	for i := 0; i < len(wordsOfOriginalText)-1; i++ {
@@ -109,7 +125,6 @@ func ReplaceArticles(originalText string) string {
 
 func FixPunctuation(originalText string) string {
 	originalTextRunes := []rune(originalText)
-
 	for i := len(originalTextRunes) - 1; i > 0; i-- {
 		if isPunctuation(originalTextRunes[i]) && originalTextRunes[i-1] == ' ' {
 			originalTextRunes = deleteSpace(originalTextRunes, i-1)
@@ -120,7 +135,6 @@ func FixPunctuation(originalText string) string {
 			originalTextRunes = addSpace(originalTextRunes, i+1)
 		}
 	}
-
 	return string(originalTextRunes)
 }
 
@@ -161,6 +175,7 @@ func ReplaceApostrophe(originalText string) string {
 	formattedText = regexRe.ReplaceAllLiteralString(formattedText, "‘re")
 	return formattedText
 }
+
 func ConvertHexToDecimal(hexNumber string) string {
 	decimalNumber, err := strconv.ParseInt(hexNumber, 16, 64)
 	// case when word before command is not hex number.
@@ -171,6 +186,7 @@ func ConvertHexToDecimal(hexNumber string) string {
 	hexNumber = strconv.Itoa(int(decimalNumber))
 	return hexNumber
 }
+
 func ConvertBinToDecimal(binNumber string) string {
 	decimalNumber, err := strconv.ParseInt(binNumber, 2, 64)
 	// case when word before command is not hex number.
@@ -181,26 +197,29 @@ func ConvertBinToDecimal(binNumber string) string {
 	binNumber = strconv.Itoa(int(decimalNumber))
 	return binNumber
 }
+
 func ToCapitalize(wordToFormat string) string {
 	return strings.Title(wordToFormat)
 }
+
 func ToLower(wordToFormat string) string {
 	return strings.ToLower(wordToFormat)
 }
+
 func ToUpper(wordToFormat string) string {
 	return strings.ToUpper(wordToFormat)
 }
+
 func ExtractNumberFromCommand(command string) int {
 	var numberStr string
-	foundDigit := false
 	for _, char := range command {
 		if unicode.IsDigit(char) {
 			numberStr += string(char)
-			foundDigit = true
-		} else if foundDigit {
+		} else if numberStr != "" {
 			break
 		}
 	}
+
 	if numberStr == "" {
 		return 1
 	}
@@ -209,13 +228,14 @@ func ExtractNumberFromCommand(command string) int {
 		fmt.Printf("Warning: unable to handle too big numbers <3 (%v)\n", numberStr)
 		return 0
 	}
-
 	number, err := strconv.Atoi(numberStr)
 	if err != nil {
 		return 0
 	}
+
 	return number
 }
+
 func IsStartedWithVowel(nextWordAfterArticle string) bool {
 	vowels := "aeiouhAEIOUH"
 	for _, letter := range vowels {
